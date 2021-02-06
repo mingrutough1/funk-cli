@@ -6,6 +6,7 @@ const chalk = require('chalk');
 const ora = require('ora');
 const log = console.log;
 const inquirer = require('inquirer');
+const Handlebars = require("handlebars");
 const fs = require('fs');
 
 const promptList = [
@@ -50,23 +51,24 @@ program
 program.command('init <name>')
        .description('init a project')
        .action((name, opts) => {
+
+        // 检查当前目录是否存在
+        try {
+            fs.accessSync(`./${name}`, fs.constants.F_OK);
+            const errStr = `fatal: destination path '${name}' already exists and is not an empty directory.`;
+            log(chalk.red(errStr));
+            return;
+        } catch (err){
+        }
+
         inquirer.prompt(promptList).then(res => {
             const {description, projectType, techType} = res;
             if(!description){ // description缺省值设置
                 res.description = `a ${techType} ${projectType} project`;
             }
-            
-            // 检查当前目录是否存在
-            try {
-                fs.accessSync(`./${name}`, fs.constants.F_OK);
-                const errStr = `fatal: destination path '${name}' already exists and is not an empty directory.`;
-                log(chalk.red(errStr));
-                return;
-            } catch (err){
-            }
-
 
             spinner.start();
+
             const downloadUrl = `direct:https://github.com/mingrutough1/project-init-templates.git#${techType}-${projectType}-template`;
             download(downloadUrl, `${name}`, { clone: true }, (err) => {
                 if(err){
@@ -74,6 +76,22 @@ program.command('init <name>')
                     return;
                 }
                 spinner.succeed('模板下载成功');
+
+                // 判断是否有package.json，有把用户cli输入数据回填至模板中
+                try {
+                    const path = `./${name}/package.json`;
+                    fs.accessSync(path, fs.constants.F_OK);
+                    const content = fs.readFileSync(path).toString();
+                    const template = Handlebars.compile(content);
+
+                    const result = template({
+                        name,
+                        description: res.description
+                    });
+                    fs.writeFileSync(path, result);
+                } catch (err){
+                    log(chalk.red('failed! 模板中不存在package.json'));
+                }
             });
         })
        });
