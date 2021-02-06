@@ -6,6 +6,7 @@ const chalk = require('chalk');
 const ora = require('ora');
 const log = console.log;
 const inquirer = require('inquirer');
+const fs = require('fs');
 
 const promptList = [
     {
@@ -54,6 +55,17 @@ program.command('init <name>')
             if(!description){ // description缺省值设置
                 res.description = `a ${techType} ${projectType} project`;
             }
+            
+            // 检查当前目录是否存在
+            try {
+                fs.accessSync(`./${name}`, fs.constants.F_OK);
+                const errStr = `fatal: destination path '${name}' already exists and is not an empty directory.`;
+                log(chalk.red(errStr));
+                return;
+            } catch (err){
+            }
+
+
             spinner.start();
             const downloadUrl = `direct:https://github.com/mingrutough1/project-init-templates.git#${techType}-${projectType}-template`;
             download(downloadUrl, `${name}`, { clone: true }, (err) => {
