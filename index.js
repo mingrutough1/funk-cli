@@ -8,6 +8,7 @@ const log = console.log;
 const inquirer = require('inquirer');
 const Handlebars = require("handlebars");
 const fs = require('fs');
+const execa = require('execa');
 
 const promptList = [
     {
@@ -89,6 +90,26 @@ program.command('init <name>')
                         description: res.description
                     });
                     fs.writeFileSync(path, result);
+                    log(chalk.green('项目初始化成功！'));
+                    spinner.start('开启依赖安装...');
+                    // 初始化git git init
+                    execa('git', ['init'], {
+                        cwd: `./${name}`
+                    }).then(res => {
+                        log(res.stdout);
+                    }).catch(err => {
+                        log(err);
+                    });
+                    // 依赖安装 npm i
+                    execa('npm', ['i'], {
+                        cwd: `./${name}`
+                    }).then(res => {
+                        log(res.stdout);
+                        spinner.succeed('依赖安装完成');
+                    }).catch(err => {
+                        spinner.fail('依赖安装失败，请手动安装');
+                        log(err);
+                    });
                 } catch (err){
                     log(chalk.red('failed! 模板中不存在package.json'));
                 }
